@@ -3,7 +3,7 @@ import os
 ACTIVE_LEAGUES = {
     "EPL": {
         "understat": "ENG Premier League",
-        "bsd_id": "94",  # BetsAPI league_id para English Premier League
+        "bsd_id": "1",  # BSD Football API internal league_id — confirmar via GET /api/v2/leagues/?name=premier
         "seasons": [2024, 2025]
     }
 }

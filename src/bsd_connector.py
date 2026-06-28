@@ -1,49 +1,53 @@
 import os
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 from config.settings import TEAM_NAME_MAPPING
 
 
 class BSDOddsAPIConnector:
     def __init__(self):
         self.api_key = os.getenv("BSD_API_KEY")
-        self.base_url = "https://api.betsapi.com/v2"
+        self.base_url = "https://sports.bzzoiro.com"
+        self.session = requests.Session()
+        if self.api_key:
+            self.session.headers["Authorization"] = f"Token {self.api_key}"
 
-    def _get(self, endpoint: str, params: dict) -> dict:
+    def _get(self, endpoint: str, params: dict = None):
         if not self.api_key:
             print("❌ Erro: BSD_API_KEY ausente no ambiente de execução do sistema.")
-            return {}
-        params["token"] = self.api_key
+            return None
         try:
-            r = requests.get(f"{self.base_url}{endpoint}", params=params, timeout=12)
+            r = self.session.get(f"{self.base_url}{endpoint}", params=params, timeout=12)
             if r.status_code != 200:
-                print(f"⚠️ BetsAPI retornou código {r.status_code}: {r.text[:200]}")
-                return {}
-            payload = r.json()
-            if not payload.get("success"):
-                print(f"⚠️ BetsAPI success=0: {payload}")
-                return {}
-            return payload
+                print(f"⚠️ BSD API retornou código {r.status_code}: {r.text[:300]}")
+                return None
+            return r.json()
         except Exception as e:
-            print(f"❌ Falha crítica de conexão com a API da BSD: {e}")
-            return {}
+            print(f"❌ Falha crítica de conexão com a BSD API: {e}")
+            return None
 
-    def get_live_market_fixtures(self, bsd_league_id: str) -> list:
-        """
-        Dois passos: lista de eventos do dia → odds Over/Under 2.5 por evento.
-        """
-        today = datetime.utcnow().strftime("%Y%m%d")
-        events_payload = self._get("/events/upcoming", {
-            "sport_id": 1,
-            "league_id": bsd_league_id,
-            "day": today,
+    def _unwrap(self, data) -> list:
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            return data.get("results", [])
+        return []
+
+    def get_live_market_fixtures(self, league_id: str) -> list:
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        data = self._get("/api/v2/events/", {
+            "league_id": league_id,
+            "date_from": today,
+            "date_to": today,
+            "status": "notstarted",
+            "limit": 200,
         })
 
         processed_fixtures = []
-        for event in events_payload.get("results", []):
-            raw_home = event.get("home", {}).get("name", "")
-            raw_away = event.get("away", {}).get("name", "")
+        for event in self._unwrap(data):
             event_id = event.get("id")
+            raw_home = event.get("home_team", "")
+            raw_away = event.get("away_team", "")
 
             if not event_id or not raw_home or not raw_away:
                 continue
@@ -57,32 +61,26 @@ class BSDOddsAPIConnector:
 
         return processed_fixtures
 
-    def _fetch_over_under_odds(self, event_id: str) -> dict:
-        """Extrai odds Over/Under 2.5 do endpoint de prematch da BetsAPI v3."""
-        payload = self._get("/bet365/prematch", {"FI": event_id})
-        results = payload.get("results", {})
-        sp = results.get("SP", {})
-
-        # Goal Lines market no formato Bet365 da BetsAPI
-        goal_lines = sp.get("goal_lines", {})
-        odds_list = goal_lines.get("odds", [])
+    def _fetch_over_under_odds(self, event_id: int) -> dict:
+        """Extrai odds Over/Under 2.5 consenso via BSD Football API v2."""
+        data = self._get("/api/v2/odds/", {
+            "event_id": event_id,
+            "market": "over_under_25",
+            "bookmaker_slug": "consensus",
+        })
 
         over_25 = None
         under_25 = None
 
-        for odd in odds_list:
-            # O handicap/name identifica a linha (ex: "2.5")
-            line = str(odd.get("name", odd.get("handicap", "")))
-            if line != "2.5":
-                continue
-            header = odd.get("header", "").lower()
+        for item in self._unwrap(data):
+            outcome = item.get("outcome", "")
             try:
-                value = float(odd.get("odds", 0))
+                value = float(item.get("decimal_odds", 0))
             except (ValueError, TypeError):
                 continue
-            if "over" in header:
+            if outcome == "over":
                 over_25 = value
-            elif "under" in header:
+            elif outcome == "under":
                 under_25 = value
 
         if over_25 and under_25:
