@@ -2,7 +2,7 @@ import os
 
 ACTIVE_LEAGUES = {
     "EPL": {
-        "understat": "EPL",
+        "understat": "ENG Premier League",
         "bsd_id": "EPL_PREMIER_LEAGUE",
         "seasons": [2024, 2025]
     }
