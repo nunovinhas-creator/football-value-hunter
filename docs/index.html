@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Football Value Hunter</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2128;
+      --border: #30363d;
+      --border-dim: #21262d;
+      --text: #c9d1d9;
+      --text-strong: #e6edf3;
+      --muted: #8b949e;
+      --green: #3fb950;
+      --green-bg: #0d2318;
+      --green-border: #238636;
+      --blue: #58a6ff;
+      --yellow: #e3b341;
+      --red: #f85149;
+      --purple: #a371f7;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-logo {
+      font-size: 20px;
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+
+    .badge {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid var(--green-border);
+      padding: 1px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .header-meta {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ─── LAYOUT ─── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 24px;
+    }
+
+    /* ─── STATS ─── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border-dim);
+      border-radius: 8px;
+      padding: 18px 20px;
+    }
+
+    .stat-card.featured {
+      border-color: var(--green-border);
+      background: linear-gradient(135deg, var(--green-bg), var(--surface));
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--text-strong);
+      line-height: 1;
+    }
+
+    .stat-card.featured .stat-value {
+      color: var(--green);
+    }
+
+    /* ─── SECTION ─── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+
+    .section-count {
+      background: var(--border-dim);
+      color: var(--muted);
+      padding: 1px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    section {
+      margin-bottom: 36px;
+    }
+
+    /* ─── SIGNAL CARDS ─── */
+    .signals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 14px;
+    }
+
+    .signal-card {
+      background: var(--green-bg);
+      border: 1px solid var(--green-border);
+      border-radius: 10px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .signal-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--green), var(--blue));
+    }
+
+    .signal-match {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-strong);
+      margin-bottom: 4px;
+      padding-right: 70px;
+    }
+
+    .signal-league {
+      display: inline-block;
+      background: var(--surface2);
+      color: var(--muted);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+
+    .signal-edge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: var(--green);
+      color: #000;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .metric-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-strong);
+    }
+
+    .metric-value.v-green { color: var(--green); }
+    .metric-value.v-blue { color: var(--blue); }
+    .metric-value.v-yellow { color: var(--yellow); }
+    .metric-value.v-purple { color: var(--purple); }
+
+    .divider {
+      height: 1px;
+      background: var(--green-border);
+      opacity: 0.4;
+      margin: 14px 0;
+    }
+
+    /* ─── EMPTY STATE ─── */
+    .empty-box {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 36px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .empty-box .empty-icon { font-size: 28px; margin-bottom: 10px; }
+    .empty-box p { font-size: 13px; max-width: 400px; margin: 0 auto; }
+
+    /* ─── TABLE ─── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border-dim);
+      border-radius: 8px;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 640px;
+    }
+
+    thead th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-dim);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-top: 1px solid var(--border-dim);
+      transition: background 0.1s;
+    }
+
+    tbody tr:hover { background: rgba(255,255,255,0.025); }
+
+    tbody td {
+      padding: 11px 14px;
+      font-size: 13px;
+    }
+
+    .td-match { font-weight: 500; color: var(--text-strong); }
+    .td-league {
+      color: var(--muted);
+      font-size: 11px;
+      background: var(--border-dim);
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .tag-value {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid var(--green-border);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .tag-reject {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .edge-pos { color: var(--green); font-weight: 600; }
+    .edge-neg { color: var(--muted); }
+
+    /* ─── LEAGUES BAR ─── */
+    .leagues-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+
+    .league-chip {
+      background: var(--surface);
+      border: 1px solid var(--border-dim);
+      color: var(--muted);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .league-chip.active {
+      background: var(--surface2);
+      border-color: var(--green-border);
+      color: var(--green);
+    }
+
+    /* ─── LOADING / ERROR ─── */
+    #loading, #error-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      gap: 16px;
+      color: var(--muted);
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--border);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #app { display: none; }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <span>A carregar dados do pipeline...</span>
+</div>
+
+<div id="error-state" style="display:none">
+  <div style="font-size:32px">📭</div>
+  <p>Sem dados disponíveis. O pipeline ainda não correu ou ocorreu um erro.</p>
+</div>
+
+<div id="app">
+  <header>
+    <span class="header-logo">⚽</span>
+    <span class="header-title">Football Value Hunter</span>
+    <span class="badge">Dixon-Coles · Shin</span>
+    <div class="header-meta">
+      <span class="status-dot"></span>
+      <span id="last-run-label">–</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card featured">
+        <div class="stat-label">Sinais de Valor</div>
+        <div class="stat-value" id="s-signals">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Partidas Analisadas</div>
+        <div class="stat-value" id="s-matches">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Ligas Ativas</div>
+        <div class="stat-value" id="s-leagues">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Taxa de Conversão</div>
+        <div class="stat-value" id="s-rate">–</div>
+      </div>
+    </div>
+
+    <!-- Leagues processed -->
+    <div class="leagues-bar" id="leagues-bar"></div>
+
+    <!-- Signals -->
+    <section>
+      <div class="section-header">
+        <span class="section-title">🚨 Sinais de Valor Over 2.5</span>
+        <span class="section-count" id="sig-count">0</span>
+      </div>
+      <div id="signals-container"></div>
+    </section>
+
+    <!-- All matches -->
+    <section>
+      <div class="section-header">
+        <span class="section-title">📋 Todas as Partidas Analisadas</span>
+        <span class="section-count" id="matches-count">0</span>
+      </div>
+      <div id="matches-container"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+  const pct = v => (v * 100).toFixed(1) + '%';
+  const odd2 = v => typeof v === 'number' ? v.toFixed(2) : '–';
+  const edgeFmt = v => (v >= 0 ? '+' : '') + (v * 100).toFixed(2) + '%';
+
+  function formatDate(iso) {
+    if (!iso) return 'Sem dados';
+    try {
+      return new Date(iso).toLocaleString('pt-PT', {
+        timeZone: 'Europe/Lisbon',
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      }) + ' (Lisboa)';
+    } catch { return iso; }
+  }
+
+  function signalCard(s) {
+    return `
+      <div class="signal-card">
+        <div class="signal-edge">Edge ${edgeFmt(s.edge)}</div>
+        <div class="signal-match">${s.home} vs ${s.away}</div>
+        <span class="signal-league">${s.league}</span>
+        <div class="metrics-grid">
+          <div class="metric">
+            <span class="metric-label">Prob. Modelo</span>
+            <span class="metric-value v-green">${pct(s.prob_over_25)}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Prob. Mercado</span>
+            <span class="metric-value v-blue">${pct(s.clean_market_prob_over)}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Odd Mercado</span>
+            <span class="metric-value v-yellow">${odd2(s.market_odd_over)}</span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="metrics-grid">
+          <div class="metric">
+            <span class="metric-label">Odd Justa</span>
+            <span class="metric-value v-green">${odd2(s.fair_odd_over)}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">BTTS Prob.</span>
+            <span class="metric-value v-purple">${pct(s.prob_btts)}</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Odd Justa BTTS</span>
+            <span class="metric-value">${odd2(s.fair_odd_btts)}</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function matchRow(m, isSignal) {
+    return `
+      <tr>
+        <td class="td-match">${m.home} vs ${m.away}</td>
+        <td><span class="td-league">${m.league}</span></td>
+        <td>${pct(m.prob_over_25)}</td>
+        <td>${pct(m.clean_market_prob_over)}</td>
+        <td class="${m.edge >= 0 ? 'edge-pos' : 'edge-neg'}">${edgeFmt(m.edge)}</td>
+        <td>${odd2(m.market_odd_over)}</td>
+        <td>${odd2(m.fair_odd_over)}</td>
+        <td>${isSignal
+          ? '<span class="tag-value">✓ Valor</span>'
+          : '<span class="tag-reject">–</span>'}</td>
+      </tr>`;
+  }
+
+  async function load() {
+    try {
+      const r = await fetch('./results.json?t=' + Date.now());
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+
+      if (!d.last_run) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error-state').style.display = 'flex';
+        return;
+      }
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+
+      // Header
+      document.getElementById('last-run-label').textContent =
+        'Última execução: ' + formatDate(d.last_run);
+
+      // Stats
+      document.getElementById('s-signals').textContent = d.total_signals ?? 0;
+      document.getElementById('s-matches').textContent = d.total_matches_analyzed ?? 0;
+      document.getElementById('s-leagues').textContent = (d.leagues_processed ?? []).length;
+      const rate = d.total_matches_analyzed > 0
+        ? ((d.total_signals / d.total_matches_analyzed) * 100).toFixed(1) + '%'
+        : '–';
+      document.getElementById('s-rate').textContent = rate;
+
+      // Leagues bar
+      const allLeagues = Object.keys(
+        Object.fromEntries(
+          [...(d.signals ?? []), ...(d.analyzed ?? [])].map(x => [x.league, 1])
+        )
+      );
+      const active = new Set(d.leagues_processed ?? []);
+      document.getElementById('leagues-bar').innerHTML =
+        allLeagues.map(lg =>
+          `<span class="league-chip${active.has(lg) ? ' active' : ''}">${lg}</span>`
+        ).join('') || '';
+
+      // Signals
+      const signals = d.signals ?? [];
+      document.getElementById('sig-count').textContent = signals.length;
+      document.getElementById('signals-container').innerHTML = signals.length
+        ? `<div class="signals-grid">${signals.map(s => signalCard(s)).join('')}</div>`
+        : `<div class="empty-box">
+             <div class="empty-icon">📊</div>
+             <p>Nenhum sinal de valor detetado na última execução. Todos os mercados foram rejeitados por não cumprirem os critérios quantitativos mínimos.</p>
+           </div>`;
+
+      // Table
+      const all = [
+        ...(signals).map(x => ({...x, _sig: true})),
+        ...(d.analyzed ?? []).map(x => ({...x, _sig: false})),
+      ];
+      document.getElementById('matches-count').textContent = all.length;
+      document.getElementById('matches-container').innerHTML = all.length
+        ? `<div class="table-wrap"><table>
+             <thead><tr>
+               <th>Partida</th><th>Liga</th><th>Prob. Modelo</th>
+               <th>Prob. Mercado</th><th>Edge</th><th>Odd Over 2.5</th>
+               <th>Odd Justa</th><th>Status</th>
+             </tr></thead>
+             <tbody>${all.map(m => matchRow(m, m._sig)).join('')}</tbody>
+           </table></div>`
+        : `<div class="empty-box">
+             <div class="empty-icon">📭</div>
+             <p>Sem partidas analisadas. Nenhuma liga tinha jogos para hoje.</p>
+           </div>`;
+
+    } catch (e) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-state').style.display = 'flex';
+      console.error(e);
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>
