@@ -7,7 +7,7 @@ from config.settings import TEAM_NAME_MAPPING
 class BSDOddsAPIConnector:
     def __init__(self):
         self.api_key = os.getenv("BSD_API_KEY")
-        self.base_url = "https://api.betsapi.com/v3"
+        self.base_url = "https://api.betsapi.com/v2"
 
     def _get(self, endpoint: str, params: dict) -> dict:
         if not self.api_key:
