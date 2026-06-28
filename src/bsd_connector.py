@@ -1,60 +1,90 @@
 import os
 import requests
+from datetime import datetime
 from config.settings import TEAM_NAME_MAPPING
 
 
 class BSDOddsAPIConnector:
     def __init__(self):
         self.api_key = os.getenv("BSD_API_KEY")
-        self.base_url = "https://api.bsd.com/v1"
+        self.base_url = "https://api.betsapi.com/v3"
+
+    def _get(self, endpoint: str, params: dict) -> dict:
+        if not self.api_key:
+            print("❌ Erro: BSD_API_KEY ausente no ambiente de execução do sistema.")
+            return {}
+        params["token"] = self.api_key
+        try:
+            r = requests.get(f"{self.base_url}{endpoint}", params=params, timeout=12)
+            if r.status_code != 200:
+                print(f"⚠️ BetsAPI retornou código {r.status_code}: {r.text[:200]}")
+                return {}
+            payload = r.json()
+            if not payload.get("success"):
+                print(f"⚠️ BetsAPI success=0: {payload}")
+                return {}
+            return payload
+        except Exception as e:
+            print(f"❌ Falha crítica de conexão com a API da BSD: {e}")
+            return {}
 
     def get_live_market_fixtures(self, bsd_league_id: str) -> list:
         """
-        Extrai os jogos agendados para o dia e as respetivas odds abertas para Over/Under 2.5.
+        Dois passos: lista de eventos do dia → odds Over/Under 2.5 por evento.
         """
-        if not self.api_key:
-            print("❌ Erro: BSD_API_KEY ausente no ambiente de execução do sistema.")
-            return []
+        today = datetime.utcnow().strftime("%Y%m%d")
+        events_payload = self._get("/events/upcoming", {
+            "sport_id": 1,
+            "league_id": bsd_league_id,
+            "day": today,
+        })
 
-        url = f"{self.base_url}/fixtures"
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        params = {
-            "league": bsd_league_id,
-            "date": "today",
-            "markets": "over_under_2.5"
-        }
+        processed_fixtures = []
+        for event in events_payload.get("results", []):
+            raw_home = event.get("home", {}).get("name", "")
+            raw_away = event.get("away", {}).get("name", "")
+            event_id = event.get("id")
 
-        try:
-            response = requests.get(url, headers=headers, params=params, timeout=12)
-            if response.status_code != 200:
-                print(f"⚠️ BSD API retornou código de estado inválido: {response.status_code}")
-                return []
+            if not event_id or not raw_home or not raw_away:
+                continue
 
-            payload = response.json()
-            processed_fixtures = []
+            home = TEAM_NAME_MAPPING.get(raw_home, raw_home)
+            away = TEAM_NAME_MAPPING.get(raw_away, raw_away)
 
-            for item in payload.get("results", []):
-                raw_home = item.get("home_team")
-                raw_away = item.get("away_team")
+            odds = self._fetch_over_under_odds(event_id)
+            if odds:
+                processed_fixtures.append({"home": home, "away": away, "odds": odds})
 
-                home_normalized = TEAM_NAME_MAPPING.get(raw_home, raw_home)
-                away_normalized = TEAM_NAME_MAPPING.get(raw_away, raw_away)
+        return processed_fixtures
 
-                odds_packet = item.get("odds", {})
-                over_25 = float(odds_packet.get("over_2.5", 0))
-                under_25 = float(odds_packet.get("under_2.5", 0))
+    def _fetch_over_under_odds(self, event_id: str) -> dict:
+        """Extrai odds Over/Under 2.5 do endpoint de prematch da BetsAPI v3."""
+        payload = self._get("/bet365/prematch", {"FI": event_id})
+        results = payload.get("results", {})
+        sp = results.get("SP", {})
 
-                if over_25 > 0 and under_25 > 0:
-                    processed_fixtures.append({
-                        "home": home_normalized,
-                        "away": away_normalized,
-                        "odds": {
-                            "over_25": over_25,
-                            "under_25": under_25
-                        }
-                    })
-            return processed_fixtures
+        # Goal Lines market no formato Bet365 da BetsAPI
+        goal_lines = sp.get("goal_lines", {})
+        odds_list = goal_lines.get("odds", [])
 
-        except Exception as e:
-            print(f"❌ Falha crítica de conexão com a API da BSD: {e}")
-            return []
+        over_25 = None
+        under_25 = None
+
+        for odd in odds_list:
+            # O handicap/name identifica a linha (ex: "2.5")
+            line = str(odd.get("name", odd.get("handicap", "")))
+            if line != "2.5":
+                continue
+            header = odd.get("header", "").lower()
+            try:
+                value = float(odd.get("odds", 0))
+            except (ValueError, TypeError):
+                continue
+            if "over" in header:
+                over_25 = value
+            elif "under" in header:
+                under_25 = value
+
+        if over_25 and under_25:
+            return {"over_25": over_25, "under_25": under_25}
+        return {}
