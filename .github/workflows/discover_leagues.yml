@@ -1,0 +1,40 @@
+name: Discover BSD Leagues
+
+on:
+  workflow_dispatch:
+
+jobs:
+  list-leagues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: List all active leagues
+        env:
+          BSD_API_KEY: ${{ secrets.BSD_API_KEY }}
+        run: |
+          python3 - <<'EOF'
+          import os, requests, json
+
+          key = os.environ["BSD_API_KEY"]
+          base = "https://sports.bzzoiro.com"
+          headers = {"Authorization": f"Token {key}"}
+
+          leagues = []
+          offset = 0
+          while True:
+              r = requests.get(f"{base}/api/v2/leagues/", headers=headers,
+                               params={"limit": 200, "offset": offset}, timeout=15)
+              data = r.json()
+              batch = data if isinstance(data, list) else data.get("results", [])
+              if not batch:
+                  break
+              leagues.extend(batch)
+              if isinstance(data, list) or not data.get("next"):
+                  break
+              offset += 200
+
+          print(f"\nTotal de ligas: {len(leagues)}\n")
+          print(f"{'ID':>6}  {'Pais':<20}  {'Nome'}")
+          print("-" * 60)
+          for lg in sorted(leagues, key=lambda x: (x.get('country',''), x.get('name',''))):
+              print(f"{lg['id']:>6}  {lg.get('country',''):.<20}  {lg['name']}")
+          EOF
