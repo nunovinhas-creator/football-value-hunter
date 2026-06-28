@@ -5,7 +5,7 @@ import os
 ACTIVE_LEAGUES = {
     "EPL":        {"understat": "ENG Premier League",  "bsd_id": "1",  "seasons": [2024, 2025]},
     "LA_LIGA":    {"understat": "ESP La Liga",         "bsd_id": "3",  "seasons": [2024, 2025]},
-    "BUNDESLIGA": {"understat": "Bundesliga",            "bsd_id": "5",  "seasons": [2024, 2025]},
+    "BUNDESLIGA": {"understat": "DEU Bundesliga 1",      "bsd_id": "5",  "seasons": [2024, 2025]},
     "SERIE_A":    {"understat": "ITA Serie A",         "bsd_id": "4",  "seasons": [2024, 2025]},
     "LIGUE_1":    {"understat": "FRA Ligue 1",         "bsd_id": "6",  "seasons": [2024, 2025]},
     "EREDIVISIE": {"footballdata": "N1",               "bsd_id": "10", "seasons": [2024, 2025]},
