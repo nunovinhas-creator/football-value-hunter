@@ -1,3 +1,5 @@
+import io
+import requests
 import penaltyblog as pb
 import pandas as pd
 
@@ -6,14 +8,20 @@ class MultiSourceDataFusion:
     def __init__(self):
         self.elo_scraper = pb.scrapers.ClubElo()
 
-    def fetch_clean_historical_data(self, league_name: str, seasons: list) -> pd.DataFrame:
-        """
-        Consome, limpa e padroniza dados históricos de golos com base no Understat.
-        """
+    def fetch_clean_historical_data(self, league_config: dict) -> pd.DataFrame:
+        seasons = league_config["seasons"]
+
+        if league_config.get("understat"):
+            return self._fetch_understat(league_config["understat"], seasons)
+
+        if league_config.get("footballdata"):
+            return self._fetch_footballdata(league_config["footballdata"], seasons)
+
+        return pd.DataFrame()
+
+    def _fetch_understat(self, league_name: str, seasons: list) -> pd.DataFrame:
         all_fixtures = []
         for season in seasons:
-            # penaltyblog >= 1.1.0: Understat requer competition e season no construtor
-            # Formato da época: "2024-2025" (ano de início + ano seguinte)
             season_str = f"{season}-{season + 1}"
             try:
                 scraper = pb.scrapers.Understat(competition=league_name, season=season_str)
@@ -26,16 +34,40 @@ class MultiSourceDataFusion:
             return pd.DataFrame()
 
         combined_df = pd.concat(all_fixtures, ignore_index=True)
-
-        # Filtrar apenas jogos concluídos (goals_home não nulo)
         played = combined_df[pd.to_numeric(combined_df["goals_home"], errors="coerce").notna()].copy()
 
-        # Colunas do penaltyblog >= 1.1.0: team_home/team_away/goals_home/goals_away
         return pd.DataFrame({
             "home_team": played["team_home"].values,
             "away_team": played["team_away"].values,
             "home_goals": pd.to_numeric(played["goals_home"]).astype(int).values,
             "away_goals": pd.to_numeric(played["goals_away"]).astype(int).values,
+        })
+
+    def _fetch_footballdata(self, code: str, seasons: list) -> pd.DataFrame:
+        """Busca dados históricos via football-data.co.uk (CSV gratuito)."""
+        all_fixtures = []
+        for season in seasons:
+            season_code = f"{str(season)[2:]}{str(season + 1)[2:]}"
+            url = f"https://www.football-data.co.uk/mmz4281/{season_code}/{code}.csv"
+            try:
+                r = requests.get(url, timeout=15)
+                r.raise_for_status()
+                df = pd.read_csv(io.StringIO(r.text))
+                all_fixtures.append(df)
+            except Exception as e:
+                print(f"⚠️ Erro ao consumir football-data.co.uk {code} época {season}: {e}")
+
+        if not all_fixtures:
+            return pd.DataFrame()
+
+        combined = pd.concat(all_fixtures, ignore_index=True)
+        played = combined[pd.to_numeric(combined["FTHG"], errors="coerce").notna()].copy()
+
+        return pd.DataFrame({
+            "home_team": played["HomeTeam"].values,
+            "away_team": played["AwayTeam"].values,
+            "home_goals": pd.to_numeric(played["FTHG"]).astype(int).values,
+            "away_goals": pd.to_numeric(played["FTAG"]).astype(int).values,
         })
 
     def fetch_team_elo_coefficient(self, team_name: str) -> float:

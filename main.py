@@ -16,7 +16,7 @@ def run_quantitative_pipeline():
     for league_key, config in ACTIVE_LEAGUES.items():
         print(f"\n🔄 Processando liga parametrizada: {league_key}")
 
-        historical_df = data_fusion.fetch_clean_historical_data(config["understat"], config["seasons"])
+        historical_df = data_fusion.fetch_clean_historical_data(config)
         if historical_df.empty:
             print(f"❌ Erro Crítico: Base histórica vazia para a liga {league_key}. Ignorando.")
             continue
