@@ -1,5 +1,7 @@
 # Football Value Hunter
 
+📋 Documentação interna e índice de portfólio mantidos em repositório privado.
+
 Bot quantitativo de value betting em futebol. Corre diariamente às 06:00 UTC, analisa odds de mercado contra probabilidades calculadas por modelo estatístico, e notifica via Telegram quando deteta uma oportunidade com vantagem real.
 
 ---
